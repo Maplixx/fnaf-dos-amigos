@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Five Nights with The Boys</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-screen {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: #111;
+            background-image: radial-gradient(circle, #222 10%, #000 90%);
+            display: none; /* Começa escondido */
+        }
+
+        /* Menu Inicial */
+        #start-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            background: black;
+            color: white;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 20px;
+            cursor: pointer;
+            background: #333;
+            color: white;
+            border: 2px solid #555;
+            margin-top: 20px;
+        }
+
+        /* Interface do Jogo */
+        .ui-overlay {
+            position: absolute;
+            z-index: 10;
+            padding: 10px;
+            pointer-events: none;
+        }
+
+        #time-display { top: 10px; right: 20px; font-size: 24px; }
+        #power-display { bottom: 20px; left: 20px; font-size: 18px; }
+        #usage-display { bottom: 50px; left: 20px; font-size: 18px; }
+
+        /* Escritório e Portas */
+        .door-btn {
+            position: absolute;
+            top: 50%;
+            width: 60px;
+            height: 60px;
+            background: red;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            pointer-events: auto;
+        }
+        
+        .door-btn.closed { background: green; }
+        
+        #btn-left { left: 10px; }
+        #btn-right { right: 10px; }
+
+        .door-visual {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 150px;
+            background: #333;
+            z-index: 2;
+            transition: transform 0.2s;
+        }
+
+        #door-left { left: 0; transform: translateX(-100%); border-right: 5px solid yellow; }
+        #door-right { right: 0; transform: translateX(100%); border-left: 5px solid yellow; }
+
+        .door-visual.active { transform: translateX(0) !important; }
+
+        /* Botão da Câmera */
+        #cam-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            padding: 10px;
+            background: #444;
+            text-align: center;
+            border: 2px solid #fff;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 20;
+        }
+
+        /* Tela das Câmeras */
+        #camera-feed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 15;
+            display: none;
+        }
+
+        .cam-noise {
+            width: 100%; height: 100%;
+            opacity: 0.1;
+            background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABZJREFUeNpi2r9//38gYGAEESAAEGAAasgJOgzOKCoAAAAASUVORK5CYII=');
+            animation: noise 0.2s infinite;
+        }
+
+        #cam-label {
+            position: absolute;
+            top: 20px; left: 20px;
+            color: white; font-size: 20px;
+        }
+
+        #monster-location {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-size: 50px;
+            display: none; /* Aparece se o monstro estiver na camera */
+        }
+
+        /* JUMPSCARE */
+        #jumpscare-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #jumpscare-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            animation: shake 0.1s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(2px, 2px) rotate(0deg); }
+            10% { transform: translate(-2px, -3px) rotate(-2deg); }
+            20% { transform: translate(-4px, 1px) rotate(2deg); }
+            30% { transform: translate(4px, 3px) rotate(0deg); }
+            40% { transform: translate(2px, -2px) rotate(2deg); }
+            50% { transform: translate(-2px, 3px) rotate(-2deg); }
+            60% { transform: translate(-4px, 2px) rotate(0deg); }
+            70% { transform: translate(4px, 2px) rotate(-2deg); }
+            80% { transform: translate(-2px, -2px) rotate(2deg); }
+            90% { transform: translate(2px, 3px) rotate(0deg); }
+            100% { transform: translate(2px, -3px) rotate(-2deg); }
+        }
+
+        @keyframes noise { 0% { background-position: 0 0; } 100% { background-position: 10px 10px; } }
+
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <h1>FIVE NIGHTS<br>WITH THE BOYS</h1>
+        <p>Sobreviva até as 6AM.</p>
+        <p>Use fones de ouvido. Vire o celular.</p>
+        <button onclick="startGame()">NOITE 1</button>
+    </div>
+
+    <div id="game-screen">
+        <div class="ui-overlay" id="time-display">12 AM</div>
+        <div class="ui-overlay" id="power-display">Power: 100%</div>
+        <div class="ui-overlay" id="usage-display">Usage: |</div>
+
+        <div id="door-left" class="door-visual"></div>
+        <div id="door-right" class="door-visual"></div>
+
+        <div id="btn-left" class="door-btn" onclick="toggleDoor('left')">DOOR</div>
+        <div id="btn-right" class="door-btn" onclick="toggleDoor('right')">DOOR</div>
+
+        <div id="cam-toggle" onmouseover="toggleCamera()" onclick="toggleCamera()">ABRIR/FECHAR MONITOR</div>
+
+        <div id="camera-feed">
+            <div class="cam-noise"></div>
+            <div id="cam-label">CAM 1A - Palco</div>
+            <div id="monster-location">⚠️ ALGO ESTÁ AQUI ⚠️</div>
+            <div style="position:absolute; bottom: 20px; right: 20px; color: grey;">
+                (Simulação de Câmeras...)
+            </div>
+        </div>
+    </div>
+
+    <div id="jumpscare-overlay">
+        <img id="jumpscare-img" src="" alt="SCREAM">
+    </div>
+
+    <audio id="scream-sound" src="scream.mp3"></audio>
+
+    <script>
+        // Variáveis do Jogo
+        let gameActive = false;
+        let power = 100;
+        let hour = 0; // 0 = 12AM
+        let usage = 1;
+        
+        let leftDoorClosed = false;
+        let rightDoorClosed = false;
+        let cameraOpen = false;
+
+        // IA do "Amigo"
+        // Posições: 0 (Longe), 1 (Perto), 2 (Na Porta Esquerda), 3 (Na Porta Direita), 4 (DENTRO)
+        let monsterPos = 0; 
+        let monsterTimer = null;
+        let difficulty = 4; // Quanto maior, mais rápido ele move
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            gameActive = true;
+            
+            // Tocar ambiente (opcional)
+            startClock();
+            startPowerDrain();
+            startMonsterAI();
+        }
+
+        // Lógica do Tempo
+        function startClock() {
+            let clockInterval = setInterval(() => {
+                if (!gameActive) { clearInterval(clockInterval); return; }
+                hour++;
+                let displayHour = hour === 0 ? 12 : hour;
+                document.getElementById('time-display').innerText = displayHour + " AM";
+                
+                if (hour === 6) {
+                    winGame();
+                }
+            }, 15000); // 15 segundos = 1 hora no jogo (jogo rápido)
+        }
+
+        // Lógica da Energia
+        function startPowerDrain() {
+            let powerInterval = setInterval(() => {
+                if (!gameActive) { clearInterval(powerInterval); return; }
+                
+                let drain = 0.2; // Base
+                if (leftDoorClosed) drain += 0.4;
+                if (rightDoorClosed) drain += 0.4;
+                if (cameraOpen) drain += 0.2;
+
+                power -= drain;
+                document.getElementById('power-display').innerText = "Power: " + Math.floor(power) + "%";
+                
+                // Atualizar barras de uso
+                let bars = "|";
+                if (drain > 0.3) bars = "||";
+                if (drain > 0.8) bars = "|||";
+                if (drain > 1.0) bars = "||||";
+                document.getElementById('usage-display').innerText = "Usage: " + bars;
+
+                if (power <= 0) {
+                    triggerPowerOutage();
+                }
+
+            }, 500);
+        }
+
+        // Controles das Portas
+        function toggleDoor(side) {
+            if (power <= 0) return;
+
+            if (side === 'left') {
+                leftDoorClosed = !leftDoorClosed;
+                let door = document.getElementById('door-left');
+                let btn = document.getElementById('btn-left');
+                if (leftDoorClosed) {
+                    door.classList.add('active');
+                    btn.classList.add('closed');
+                } else {
+                    door.classList.remove('active');
+                    btn.classList.remove('closed');
+                }
+            } else {
+                rightDoorClosed = !rightDoorClosed;
+                let door = document.getElementById('door-right');
+                let btn = document.getElementById('btn-right');
+                if (rightDoorClosed) {
+                    door.classList.add('active');
+                    btn.classList.add('closed');
+                } else {
+                    door.classList.remove('active');
+                    btn.classList.remove('closed');
+                }
+            }
+        }
+
+        function toggleCamera() {
+            if (power <= 0) return;
+            cameraOpen = !cameraOpen;
+            let cam = document.getElementById('camera-feed');
+            cam.style.display = cameraOpen ? 'block' : 'none';
+        }
+
+        // IA do Monstro
+        function startMonsterAI() {
+            monsterTimer = setInterval(() => {
+                if (!gameActive) return;
+
+                // Chance de mover
+                if (Math.random() * 20 < difficulty) {
+                    moveMonster();
+                }
+
+            }, 3000); // Tenta mover a cada 3 segundos
+        }
+
+        function moveMonster() {
+            // Lógica simples de movimento
+            // Se estiver longe (0), vai para perto (1)
+            // Se estiver perto (1), escolhe Esquerda (2) ou Direita (3)
+            // Se estiver na porta (2 ou 3) e porta aberta -> ATAQUE (4)
+            // Se estiver na porta e porta fechada -> volta para longe (0)
+
+            if (monsterPos === 0) {
+                monsterPos = 1; 
+                // console.log("Monstro aproximando...");
+            } else if (monsterPos === 1) {
+                monsterPos = Math.random() > 0.5 ? 2 : 3;
+                // console.log("Monstro na porta " + (monsterPos === 2 ? "ESQUERDA" : "DIREITA"));
+            } else if (monsterPos === 2) { // Porta Esquerda
+                if (leftDoorClosed) {
+                    monsterPos = 0; // Bloqueado, vai embora
+                    // console.log("Monstro bloqueado na esquerda.");
+                } else {
+                    triggerJumpscare();
+                }
+            } else if (monsterPos === 3) { // Porta Direita
+                if (rightDoorClosed) {
+                    monsterPos = 0; // Bloqueado, vai embora
+                    // console.log("Monstro bloqueado na direita.");
+                } else {
+                    triggerJumpscare();
+                }
+            }
+
+            updateCameraFeed();
+        }
+
+        function updateCameraFeed() {
+            const locText = document.getElementById('monster-location');
+            if (cameraOpen) {
+                if (monsterPos === 1) {
+                    locText.innerText = "ELE ESTÁ NO CORREDOR!";
+                    locText.style.display = 'block';
+                } else if (monsterPos === 2) {
+                    locText.innerText = "ELE ESTÁ NA PORTA ESQUERDA!";
+                    locText.style.display = 'block';
+                } else if (monsterPos === 3) {
+                    locText.innerText = "ELE ESTÁ NA PORTA DIREITA!";
+                    locText.style.display = 'block';
+                } else {
+                    locText.style.display = 'none';
+                }
+            }
+        }
+
+        function triggerPowerOutage() {
+            gameActive = false;
+            document.getElementById('game-screen').style.opacity = 0.2; // Escuro total
+            setTimeout(triggerJumpscare, 3000); // 3 segundos de suspense
+        }
+
+        function triggerJumpscare() {
+            gameActive = false;
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('jumpscare-overlay').style.display = 'flex';
+            
+            // ESCOLHER FOTO ALEATÓRIA
+            // Gera número entre 1 e 5
+            let randomNum = Math.floor(Math.random() * 5) + 1; 
+            let imgName = "scare" + randomNum + ".png"; // scare1.png, scare2.png...
+            
+            document.getElementById('jumpscare-img').src = imgName;
+            
+            // Tocar som
+            let audio = document.getElementById('scream-sound');
+            audio.play().catch(e => console.log("Audio precisa de interação"));
+
+            setTimeout(() => {
+                alert("GAME OVER! Eles te pegaram.");
+                location.reload();
+            }, 3000);
+        }
+
+        function winGame() {
+            gameActive = false;
+            alert("6:00 AM - VOCÊ SOBREVIVEU!");
+            location.reload();
+        }
+    </script>
+</body>
+</html>
