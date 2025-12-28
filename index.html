@@ -3,424 +3,468 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Five Nights with The Boys</title>
+    <title>Five Nights with The Boys v3 (Hardcore)</title>
     <style>
+        :root {
+            --metal-dark: #1a1a1a;
+            --cam-btn-bg: #444;
+            --danger-green: #0f0;
+            --danger-yellow: #ff0;
+            --danger-red: #f00;
+        }
+
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #000;
-            color: #fff;
+            margin: 0; padding: 0;
+            background-color: #000; color: #fff;
             font-family: 'Courier New', Courier, monospace;
-            overflow: hidden;
-            user-select: none;
+            overflow: hidden; user-select: none;
+            height: 100vh; width: 100vw;
         }
 
+        /* --- AMBIENTE GERAL --- */
         #game-screen {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-            background: #111;
-            background-image: radial-gradient(circle, #222 10%, #000 90%);
-            display: none; /* Começa escondido */
-        }
-
-        /* Menu Inicial */
-        #start-screen {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-            background: black;
-            color: white;
-        }
-
-        button {
-            padding: 15px 30px;
-            font-size: 20px;
-            cursor: pointer;
-            background: #333;
-            color: white;
-            border: 2px solid #555;
-            margin-top: 20px;
-        }
-
-        /* Interface do Jogo */
-        .ui-overlay {
-            position: absolute;
-            z-index: 10;
-            padding: 10px;
-            pointer-events: none;
-        }
-
-        #time-display { top: 10px; right: 20px; font-size: 24px; }
-        #power-display { bottom: 20px; left: 20px; font-size: 18px; }
-        #usage-display { bottom: 50px; left: 20px; font-size: 18px; }
-
-        /* Escritório e Portas */
-        .door-btn {
-            position: absolute;
-            top: 50%;
-            width: 60px;
-            height: 60px;
-            background: red;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            pointer-events: auto;
-        }
-        
-        .door-btn.closed { background: green; }
-        
-        #btn-left { left: 10px; }
-        #btn-right { right: 10px; }
-
-        .door-visual {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 150px;
-            background: #333;
-            z-index: 2;
-            transition: transform 0.2s;
-        }
-
-        #door-left { left: 0; transform: translateX(-100%); border-right: 5px solid yellow; }
-        #door-right { right: 0; transform: translateX(100%); border-left: 5px solid yellow; }
-
-        .door-visual.active { transform: translateX(0) !important; }
-
-        /* Botão da Câmera */
-        #cam-toggle {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 200px;
-            padding: 10px;
-            background: #444;
-            text-align: center;
-            border: 2px solid #fff;
-            cursor: pointer;
-            pointer-events: auto;
-            z-index: 20;
-        }
-
-        /* Tela das Câmeras */
-        #camera-feed {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 15;
+            width: 100%; height: 100%; position: relative;
+            background: radial-gradient(circle at 50% 50%, #222 10%, #000 90%);
             display: none;
         }
-
-        .cam-noise {
-            width: 100%; height: 100%;
-            opacity: 0.1;
+        
+        .static-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%;
             background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABZJREFUeNpi2r9//38gYGAEESAAEGAAasgJOgzOKCoAAAAASUVORK5CYII=');
-            animation: noise 0.2s infinite;
+            opacity: 0.08; pointer-events: none; z-index: 90;
         }
 
-        #cam-label {
-            position: absolute;
-            top: 20px; left: 20px;
-            color: white; font-size: 20px;
+        /* --- UI PRINCIPAL --- */
+        .ui-text {
+            position: absolute; z-index: 95; font-weight: bold; text-shadow: 2px 2px 0 #000; pointer-events: none;
+        }
+        #time-display { top: 20px; right: 20px; font-size: 32px; }
+        #power-display { bottom: 20px; left: 20px; font-size: 20px; }
+        
+        /* MEDIDOR DE PERIGO */
+        #danger-meter {
+            top: 20px; left: 50%; transform: translateX(-50%);
+            font-size: 24px; border: 2px solid #555; padding: 5px 15px;
+            background: rgba(0,0,0,0.8); transition: color 0.5s;
         }
 
-        #monster-location {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            color: red;
-            font-size: 50px;
-            display: none; /* Aparece se o monstro estiver na camera */
+        /* --- PORTAS E BOTÕES --- */
+        .door-visual {
+            position: absolute; top: 0; bottom: 0; width: 150px;
+            background: repeating-linear-gradient(45deg, #222, #222 10px, #111 10px, #111 20px);
+            border: 2px solid #333; transition: transform 0.2s linear;
+            z-index: 10;
+        }
+        #door-left { left: 0; transform: translateY(-100%); border-right: 5px solid yellow; }
+        #door-right { right: 0; transform: translateY(-100%); border-left: 5px solid yellow; }
+        .door-visual.closed { transform: translateY(0) !important; }
+
+        .control-panel {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 15px; z-index: 80;
+        }
+        #panel-left { left: 160px; }
+        #panel-right { right: 160px; }
+
+        .game-btn {
+            width: 60px; height: 60px; background: #500; border: 3px solid #700;
+            border-radius: 5px; color: white; font-weight: bold; cursor: pointer;
+            box-shadow: 0 0 10px #000;
+        }
+        .game-btn.active { background: #0a0; border-color: #0f0; box-shadow: 0 0 20px #0f0; }
+
+        /* --- CÂMERA SISTEMA --- */
+        #cam-trigger {
+            position: absolute; bottom: 20px; right: 150px; width: 300px; padding: 10px;
+            background: #333; border: 2px solid #fff; text-align: center; cursor: pointer;
+            z-index: 99; opacity: 0.7; font-size: 20px;
+        }
+        #cam-trigger:hover { opacity: 1; }
+
+        #camera-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 96; display: none;
         }
 
-        /* JUMPSCARE */
-        #jumpscare-overlay {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: black;
-            z-index: 100;
-            display: none;
-            justify-content: center;
-            align-items: center;
+        /* Visualização da Câmera (Onde a foto aparece) */
+        #cam-view-port {
+            width: 80%; height: 80%; margin: 20px auto;
+            border: 2px solid #555; position: relative; overflow: hidden;
+            background: #111;
+        }
+        
+        .cam-scanline {
+            position: absolute; width: 100%; height: 10px; background: rgba(255,255,255,0.1);
+            animation: scan 3s linear infinite; pointer-events: none;
+        }
+        @keyframes scan { 0% {top: -10%} 100% {top: 110%} }
+
+        #cam-image-container {
+            width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;
+        }
+        #cam-monster-img {
+            max-width: 90%; max-height: 90%; display: none; /* Só aparece se monstro estiver lá */
+            filter: grayscale(100%) contrast(1.5) brightness(0.6);
+        }
+        #no-signal-text {
+            position: absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+            font-size: 40px; color: #333; display: block;
         }
 
-        #jumpscare-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            animation: shake 0.1s infinite;
+        /* Mapa das Câmeras */
+        #cam-map {
+            position: absolute; bottom: 20px; right: 20px;
+            width: 200px; height: 150px; border: 1px solid #555;
+            background: rgba(0,0,0,0.8); padding: 10px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
         }
-
-        @keyframes shake {
-            0% { transform: translate(2px, 2px) rotate(0deg); }
-            10% { transform: translate(-2px, -3px) rotate(-2deg); }
-            20% { transform: translate(-4px, 1px) rotate(2deg); }
-            30% { transform: translate(4px, 3px) rotate(0deg); }
-            40% { transform: translate(2px, -2px) rotate(2deg); }
-            50% { transform: translate(-2px, 3px) rotate(-2deg); }
-            60% { transform: translate(-4px, 2px) rotate(0deg); }
-            70% { transform: translate(4px, 2px) rotate(-2deg); }
-            80% { transform: translate(-2px, -2px) rotate(2deg); }
-            90% { transform: translate(2px, 3px) rotate(0deg); }
-            100% { transform: translate(2px, -3px) rotate(-2deg); }
+        .cam-select-btn {
+            background: #222; color: #fff; border: 1px solid #555; cursor: pointer; font-size: 12px;
         }
+        .cam-select-btn.selected { background: #0a0; color: #000; font-weight: bold; }
 
-        @keyframes noise { 0% { background-position: 0 0; } 100% { background-position: 10px 10px; } }
-
+        /* --- TELAS FINAIS --- */
+        #jumpscare-overlay, #start-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 100; display: flex;
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        #jumpscare-overlay { display: none; }
+        #jumpscare-full-img { width: 100%; height: 100%; object-fit: cover; }
+        
+        #start-screen {
+            background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('scare1.png'); /* Usa uma foto como fundo */
+            background-size: cover;
+        }
     </style>
 </head>
 <body>
+    <div class="static-overlay"></div>
 
     <div id="start-screen">
-        <h1>FIVE NIGHTS<br>WITH THE BOYS</h1>
-        <p>Sobreviva até as 6AM.</p>
-        <p>Use fones de ouvido. Vire o celular.</p>
-        <button onclick="startGame()">NOITE 1</button>
+        <h1 style="font-size: 50px; color: #d00; text-shadow: 0 0 10px #f00;">IMPOSSIBLE MODE</h1>
+        <p>Chance de Jumpscare Ativada.</p>
+        <button onclick="startGame()" style="padding: 20px; font-size: 24px; cursor: pointer; background: #a00; border: none; color: white;">COMEÇAR NOITE</button>
     </div>
 
     <div id="game-screen">
-        <div class="ui-overlay" id="time-display">12 AM</div>
-        <div class="ui-overlay" id="power-display">Power: 100%</div>
-        <div class="ui-overlay" id="usage-display">Usage: |</div>
+        <div id="danger-meter" class="ui-text">RISCO: 0%</div>
+        <div id="time-display" class="ui-text">12 AM</div>
+        <div id="power-display" class="ui-text">Power: 100%</div>
 
         <div id="door-left" class="door-visual"></div>
         <div id="door-right" class="door-visual"></div>
 
-        <div id="btn-left" class="door-btn" onclick="toggleDoor('left')">DOOR</div>
-        <div id="btn-right" class="door-btn" onclick="toggleDoor('right')">DOOR</div>
+        <div id="panel-left" class="control-panel">
+            <button id="btn-left" class="game-btn" onclick="toggleDoor('left')">DOOR</button>
+            <button class="game-btn" style="background:#444;">LGT</button>
+        </div>
+        <div id="panel-right" class="control-panel">
+            <button id="btn-right" class="game-btn" onclick="toggleDoor('right')">DOOR</button>
+            <button class="game-btn" style="background:#444;">LGT</button>
+        </div>
 
-        <div id="cam-toggle" onmouseover="toggleCamera()" onclick="toggleCamera()">ABRIR/FECHAR MONITOR</div>
+        <div id="cam-trigger" onclick="toggleCamera()">ABRIR MONITOR</div>
 
-        <div id="camera-feed">
-            <div class="cam-noise"></div>
-            <div id="cam-label">CAM 1A - Palco</div>
-            <div id="monster-location">⚠️ ALGO ESTÁ AQUI ⚠️</div>
-            <div style="position:absolute; bottom: 20px; right: 20px; color: grey;">
-                (Simulação de Câmeras...)
+        <div id="camera-screen">
+            <div id="cam-view-port">
+                <div class="cam-scanline"></div>
+                <div style="position:absolute; top:10px; left:10px; color:white;">REC ●</div>
+                <div id="current-cam-name" style="position:absolute; top:10px; right:10px; color:white;">CAM 1A</div>
+                
+                <div id="cam-image-container">
+                    <span id="no-signal-text">NO SIGNAL</span>
+                    <img id="cam-monster-img" src="" alt="monster">
+                </div>
+            </div>
+
+            <div id="cam-map">
+                <button class="cam-select-btn selected" onclick="switchCam('cam1a')">CAM 1A (Palco)</button>
+                <button class="cam-select-btn" onclick="switchCam('cam1b')">CAM 1B (Salão)</button>
+                <button class="cam-select-btn" onclick="switchCam('cam2a')">CAM 2A (Corredor Esq)</button>
+                <button class="cam-select-btn" onclick="switchCam('cam2b')">CAM 2B (Corredor Dir)</button>
+                <button class="cam-select-btn" onclick="switchCam('cam3')">CAM 3 (Porta ESQ)</button>
+                <button class="cam-select-btn" onclick="switchCam('cam4')">CAM 4 (Porta DIR)</button>
             </div>
         </div>
     </div>
 
     <div id="jumpscare-overlay">
-        <img id="jumpscare-img" src="" alt="SCREAM">
+        <img id="jumpscare-full-img" src="">
     </div>
 
-    <audio id="scream-sound" src="scream.mp3"></audio>
+    <audio id="audio-scream" src="scream.mp3"></audio>
+    <audio id="audio-door" src="door.mp3"></audio>
 
     <script>
-        // Variáveis do Jogo
-        let gameActive = false;
-        let power = 100;
-        let hour = 0; // 0 = 12AM
-        let usage = 1;
-        
-        let leftDoorClosed = false;
-        let rightDoorClosed = false;
-        let cameraOpen = false;
+        // --- CONFIGURAÇÃO ---
+        const gameState = {
+            active: false,
+            hour: 0,
+            power: 100,
+            danger: 0, // 0 a 100%
+            cameraOpen: false,
+            currentCam: 'cam1a',
+            leftDoor: false,
+            rightDoor: false,
+            monsterLoc: 'cam1a', // Começa no palco
+            monsterImgIndex: 1 // Qual foto usar
+        };
 
-        // IA do "Amigo"
-        // Posições: 0 (Longe), 1 (Perto), 2 (Na Porta Esquerda), 3 (Na Porta Direita), 4 (DENTRO)
-        let monsterPos = 0; 
-        let monsterTimer = null;
-        let difficulty = 4; // Quanto maior, mais rápido ele move
+        // Mapeamento de Câmeras
+        const cams = ['cam1a', 'cam1b', 'cam2a', 'cam2b', 'cam3', 'cam4'];
+        
+        // Timer references
+        let timers = {};
 
         function startGame() {
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'block';
-            gameActive = true;
+            gameState.active = true;
             
-            // Tocar ambiente (opcional)
-            startClock();
-            startPowerDrain();
-            startMonsterAI();
+            timers.clock = setInterval(gameClock, 15000); // 15s por hora
+            timers.ai = setInterval(monsterAI, 4000); // Monstro move a cada 4s
+            timers.power = setInterval(powerDrain, 500);
+            timers.danger = setInterval(dangerMechanic, 1000); // Calcula risco a cada 1s
         }
 
-        // Lógica do Tempo
-        function startClock() {
-            let clockInterval = setInterval(() => {
-                if (!gameActive) { clearInterval(clockInterval); return; }
-                hour++;
-                let displayHour = hour === 0 ? 12 : hour;
-                document.getElementById('time-display').innerText = displayHour + " AM";
-                
-                if (hour === 6) {
-                    winGame();
+        // --- SISTEMA DE RISCO (DANGER) ---
+        function dangerMechanic() {
+            if (!gameState.active) return;
+            
+            // O risco aumenta naturalmente com o tempo
+            let increase = 1;
+            
+            // Se o monstro estiver nas portas, risco sobe MUITO
+            if (gameState.monsterLoc === 'cam3' || gameState.monsterLoc === 'cam4') {
+                increase = 5;
+            }
+
+            // Portas fechadas acalmam um pouco o risco (falsa sensação de segurança)
+            if (gameState.leftDoor || gameState.rightDoor) {
+                increase -= 2;
+            }
+
+            gameState.danger += increase;
+            
+            // Limites
+            if (gameState.danger < 0) gameState.danger = 0;
+            if (gameState.danger > 100) gameState.danger = 100;
+
+            updateDangerUI();
+        }
+
+        function updateDangerUI() {
+            const el = document.getElementById('danger-meter');
+            el.innerText = `RISCO: ${gameState.danger}%`;
+            
+            if (gameState.danger <= 30) {
+                el.style.color = 'var(--danger-green)';
+                el.style.borderColor = 'var(--danger-green)';
+            } else if (gameState.danger <= 70) {
+                el.style.color = 'var(--danger-yellow)';
+                el.style.borderColor = 'var(--danger-yellow)';
+            } else {
+                el.style.color = 'var(--danger-red)';
+                el.style.borderColor = 'var(--danger-red)';
+            }
+        }
+
+        function checkRiskAction() {
+            // Toda vez que o jogador faz algo, checa se morre pelo risco alto
+            if (gameState.danger > 80) {
+                // 30% de chance de morrer a qualquer clique se o risco estiver alto
+                if (Math.random() < 0.3) {
+                    forceJumpscare();
                 }
-            }, 15000); // 15 segundos = 1 hora no jogo (jogo rápido)
+            }
         }
 
-        // Lógica da Energia
-        function startPowerDrain() {
-            let powerInterval = setInterval(() => {
-                if (!gameActive) { clearInterval(powerInterval); return; }
-                
-                let drain = 0.2; // Base
-                if (leftDoorClosed) drain += 0.4;
-                if (rightDoorClosed) drain += 0.4;
-                if (cameraOpen) drain += 0.2;
-
-                power -= drain;
-                document.getElementById('power-display').innerText = "Power: " + Math.floor(power) + "%";
-                
-                // Atualizar barras de uso
-                let bars = "|";
-                if (drain > 0.3) bars = "||";
-                if (drain > 0.8) bars = "|||";
-                if (drain > 1.0) bars = "||||";
-                document.getElementById('usage-display').innerText = "Usage: " + bars;
-
-                if (power <= 0) {
-                    triggerPowerOutage();
-                }
-
-            }, 500);
-        }
-
-        // Controles das Portas
+        // --- PORTAS ---
         function toggleDoor(side) {
-            if (power <= 0) return;
+            checkRiskAction();
+            if (gameState.power <= 0) return;
+
+            let audio = document.getElementById('audio-door');
+            audio.currentTime = 0;
+            audio.play().catch(e => {});
 
             if (side === 'left') {
-                leftDoorClosed = !leftDoorClosed;
-                let door = document.getElementById('door-left');
-                let btn = document.getElementById('btn-left');
-                if (leftDoorClosed) {
-                    door.classList.add('active');
-                    btn.classList.add('closed');
-                } else {
-                    door.classList.remove('active');
-                    btn.classList.remove('closed');
-                }
+                gameState.leftDoor = !gameState.leftDoor;
+                document.getElementById('door-left').classList.toggle('closed', gameState.leftDoor);
+                document.getElementById('btn-left').classList.toggle('active', gameState.leftDoor);
             } else {
-                rightDoorClosed = !rightDoorClosed;
-                let door = document.getElementById('door-right');
-                let btn = document.getElementById('btn-right');
-                if (rightDoorClosed) {
-                    door.classList.add('active');
-                    btn.classList.add('closed');
-                } else {
-                    door.classList.remove('active');
-                    btn.classList.remove('closed');
-                }
+                gameState.rightDoor = !gameState.rightDoor;
+                document.getElementById('door-right').classList.toggle('closed', gameState.rightDoor);
+                document.getElementById('btn-right').classList.toggle('active', gameState.rightDoor);
             }
         }
 
+        // --- CÂMERAS ---
         function toggleCamera() {
-            if (power <= 0) return;
-            cameraOpen = !cameraOpen;
-            let cam = document.getElementById('camera-feed');
-            cam.style.display = cameraOpen ? 'block' : 'none';
-        }
-
-        // IA do Monstro
-        function startMonsterAI() {
-            monsterTimer = setInterval(() => {
-                if (!gameActive) return;
-
-                // Chance de mover
-                if (Math.random() * 20 < difficulty) {
-                    moveMonster();
-                }
-
-            }, 3000); // Tenta mover a cada 3 segundos
-        }
-
-        function moveMonster() {
-            // Lógica simples de movimento
-            // Se estiver longe (0), vai para perto (1)
-            // Se estiver perto (1), escolhe Esquerda (2) ou Direita (3)
-            // Se estiver na porta (2 ou 3) e porta aberta -> ATAQUE (4)
-            // Se estiver na porta e porta fechada -> volta para longe (0)
-
-            if (monsterPos === 0) {
-                monsterPos = 1; 
-                // console.log("Monstro aproximando...");
-            } else if (monsterPos === 1) {
-                monsterPos = Math.random() > 0.5 ? 2 : 3;
-                // console.log("Monstro na porta " + (monsterPos === 2 ? "ESQUERDA" : "DIREITA"));
-            } else if (monsterPos === 2) { // Porta Esquerda
-                if (leftDoorClosed) {
-                    monsterPos = 0; // Bloqueado, vai embora
-                    // console.log("Monstro bloqueado na esquerda.");
-                } else {
-                    triggerJumpscare();
-                }
-            } else if (monsterPos === 3) { // Porta Direita
-                if (rightDoorClosed) {
-                    monsterPos = 0; // Bloqueado, vai embora
-                    // console.log("Monstro bloqueado na direita.");
-                } else {
-                    triggerJumpscare();
-                }
-            }
-
-            updateCameraFeed();
-        }
-
-        function updateCameraFeed() {
-            const locText = document.getElementById('monster-location');
-            if (cameraOpen) {
-                if (monsterPos === 1) {
-                    locText.innerText = "ELE ESTÁ NO CORREDOR!";
-                    locText.style.display = 'block';
-                } else if (monsterPos === 2) {
-                    locText.innerText = "ELE ESTÁ NA PORTA ESQUERDA!";
-                    locText.style.display = 'block';
-                } else if (monsterPos === 3) {
-                    locText.innerText = "ELE ESTÁ NA PORTA DIREITA!";
-                    locText.style.display = 'block';
-                } else {
-                    locText.style.display = 'none';
-                }
+            checkRiskAction();
+            if (gameState.power <= 0) return;
+            
+            gameState.cameraOpen = !gameState.cameraOpen;
+            document.getElementById('camera-screen').style.display = gameState.cameraOpen ? 'block' : 'none';
+            
+            if (gameState.cameraOpen) {
+                updateCamView();
             }
         }
 
-        function triggerPowerOutage() {
-            gameActive = false;
-            document.getElementById('game-screen').style.opacity = 0.2; // Escuro total
-            setTimeout(triggerJumpscare, 3000); // 3 segundos de suspense
+        function switchCam(camName) {
+            checkRiskAction();
+            gameState.currentCam = camName;
+            
+            // Atualizar botões UI
+            document.querySelectorAll('.cam-select-btn').forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+            
+            document.getElementById('current-cam-name').innerText = camName.toUpperCase();
+            updateCamView();
         }
 
-        function triggerJumpscare() {
-            gameActive = false;
+        function updateCamView() {
+            const img = document.getElementById('cam-monster-img');
+            const txt = document.getElementById('no-signal-text');
+            
+            // Lógica: Se o monstro está onde a câmera está
+            if (gameState.monsterLoc === gameState.currentCam) {
+                // Seleciona uma foto baseada no index atual (para variar as fotos)
+                img.src = `scare${gameState.monsterImgIndex}.png`;
+                img.style.display = 'block';
+                txt.style.display = 'none';
+
+                // SE ESTIVER NA PORTA (CAM3 ou CAM4) e o jogador olhou
+                if (gameState.monsterLoc === 'cam3' || gameState.monsterLoc === 'cam4') {
+                    // Espera 0.3s e mata
+                    setTimeout(() => {
+                        if (gameState.cameraOpen && gameState.active) {
+                            forceJumpscare();
+                        }
+                    }, 300);
+                }
+
+            } else {
+                img.style.display = 'none';
+                txt.style.display = 'block';
+            }
+        }
+
+        // --- IA DO MONSTRO ---
+        function monsterAI() {
+            if (!gameState.active) return;
+
+            // Chance de mover baseada no perigo atual
+            // Se perigo alto, move mais rápido
+            let moveChance = 0.4 + (gameState.danger / 200); 
+            
+            if (Math.random() < moveChance) {
+                // Rota simples: 1a -> 1b -> 2a/2b -> 3/4 -> ATAQUE
+                let oldLoc = gameState.monsterLoc;
+                
+                if (oldLoc === 'cam1a') gameState.monsterLoc = 'cam1b';
+                else if (oldLoc === 'cam1b') gameState.monsterLoc = Math.random() > 0.5 ? 'cam2a' : 'cam2b';
+                else if (oldLoc === 'cam2a') gameState.monsterLoc = 'cam3'; // Porta Esq
+                else if (oldLoc === 'cam2b') gameState.monsterLoc = 'cam4'; // Porta Dir
+                else if (oldLoc === 'cam3') {
+                    // Na porta esquerda
+                    if (gameState.leftDoor) {
+                        gameState.monsterLoc = 'cam1a'; // Bloqueado, volta
+                        gameState.danger -= 20; // Recompensa
+                    } else {
+                        // Se não estiver olhando a camera, ele entra
+                        if (!gameState.cameraOpen) forceJumpscare();
+                    }
+                }
+                else if (oldLoc === 'cam4') {
+                    // Na porta direita
+                    if (gameState.rightDoor) {
+                        gameState.monsterLoc = 'cam1a'; // Bloqueado
+                        gameState.danger -= 20;
+                    } else {
+                        if (!gameState.cameraOpen) forceJumpscare();
+                    }
+                }
+
+                // Troca a foto aleatoriamente a cada movimento
+                gameState.monsterImgIndex = Math.floor(Math.random() * 5) + 1;
+                
+                // Se a camera estiver aberta, atualiza a visão (pode aparecer ou sumir)
+                if (gameState.cameraOpen) updateCamView();
+            }
+        }
+
+        // --- SISTEMAS GERAIS ---
+        function gameClock() {
+            if (!gameState.active) return;
+            gameState.hour++;
+            let h = gameState.hour === 0 ? 12 : gameState.hour;
+            document.getElementById('time-display').innerText = h + " AM";
+            if (gameState.hour === 6) winGame();
+        }
+
+        function powerDrain() {
+            if (!gameState.active) return;
+            let drain = 0.1;
+            if (gameState.leftDoor) drain += 0.3;
+            if (gameState.rightDoor) drain += 0.3;
+            if (gameState.cameraOpen) drain += 0.2;
+            
+            gameState.power -= drain;
+            document.getElementById('power-display').innerText = `Power: ${Math.floor(gameState.power)}%`;
+            
+            if (gameState.power <= 0) {
+                gameState.active = false;
+                document.getElementById('game-screen').style.opacity = 0.1;
+                setTimeout(forceJumpscare, 4000); // Morte no escuro
+            }
+        }
+
+        function forceJumpscare() {
+            if (!gameState.active) return; // Evita duplo jumpscare
+            gameState.active = false;
+            
             document.getElementById('game-screen').style.display = 'none';
             document.getElementById('jumpscare-overlay').style.display = 'flex';
             
-            // ESCOLHER FOTO ALEATÓRIA
-            // Gera número entre 1 e 5
-            let randomNum = Math.floor(Math.random() * 5) + 1; 
-            let imgName = "scare" + randomNum + ".png"; // scare1.png, scare2.png...
+            // Pega foto aleatória pro susto final
+            let r = Math.floor(Math.random() * 5) + 1;
+            document.getElementById('jumpscare-full-img').src = `scare${r}.png`;
             
-            document.getElementById('jumpscare-img').src = imgName;
+            // Animação CSS manual via JS para tremer muito
+            let img = document.getElementById('jumpscare-full-img');
+            img.style.animation = "shake 0.1s infinite";
             
-            // Tocar som
-            let audio = document.getElementById('scream-sound');
-            audio.play().catch(e => console.log("Audio precisa de interação"));
+            document.getElementById('audio-scream').play().catch(()=>{});
 
             setTimeout(() => {
-                alert("GAME OVER! Eles te pegaram.");
+                alert("GAME OVER\nO Risco estava em: " + Math.floor(gameState.danger) + "%");
                 location.reload();
-            }, 3000);
+            }, 2500);
         }
 
         function winGame() {
-            gameActive = false;
-            alert("6:00 AM - VOCÊ SOBREVIVEU!");
+            gameState.active = false;
+            alert("6:00 AM - VOCÊ SOBREVIVEU A NOITE IMPOSSÍVEL!");
             location.reload();
         }
     </script>
+    <style>
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+    </style>
 </body>
 </html>
